@@ -14,7 +14,7 @@ The first attaches node main process to a debugger, then by loading process modu
 
 ![image](https://github.com/user-attachments/assets/4bf57ddd-9470-4da1-900a-b80ac7306ef3)
 
-Some applications disable the main process debug, in that case the second argument allows to debug a renderer process and find chrome version in the navigator object
+Some applications disable main process debug, in that case the second argument allows to debug a renderer process and find chrome version in the navigator object
  
 ![image](https://github.com/user-attachments/assets/5446298e-6e33-4744-819b-c42ef97b3a6f)
 
