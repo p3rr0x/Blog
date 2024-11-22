@@ -229,8 +229,8 @@ Output is the hex value of test.wat, this is used as the Uint8Array to generate 
 ## Find shellcode offset inside WASM rwx memory page
 
 Once we have our shellcode as float inside the WebAssembly module we can find the offset in the debugger.
-The RWX address if at offset 0x48 from the WASM module (this might differ from different v8 versions, the offset can be found debugging d8)
-At addrof(wasm) + 0x48 we have the RWX address, then look for the shellcode offset by inspecting memory from RWX address looking for the first ```mov r10``` instruction.
+The RWX address is at offset 0x48 from the WASM module (this might differ from different v8 versions, the offset can be found debugging d8)
+At addrof(wasm) + 0x48 we have the RWX address, shellcode offset is found by inspecting the RWX address looking for the first ```mov r10``` instruction.
 Inspect the RWX address
 
 ![image](https://github.com/user-attachments/assets/379427aa-bfaa-48dd-99b5-da7838e34fda)
@@ -259,19 +259,21 @@ heap_write64(target_rwx, shellcode_0);
 The last step is to evade ASLR , get kernel32.dll address and execute our code through winexec.
 Testing across multiple electron applications, setting a breakpoint as the first assembly instruction I found that there is a memory address at RSP+0x38 which is at a fixed offset from a reference to a kernel32.dll address.
 
-The electron application binary has many exported functions, one of them is called ``uv_spawn``.
+The electron application binary has many exported functions, one of them is called ```uv_spawn```.
 Exported functions address in memory can be found by getting the offset from the binary memory dump in windows or using nm –demangle in linux
 
 ![image](https://github.com/user-attachments/assets/143f5310-8e18-428c-a750-ed988753d457)
 
 What we need here is the second column, that is offset of the function.
-In windbg the base address of the application can be obtained with !PEB command 
+In windbg the base address of the application and other modules can be obtained with !PEB command 
+
 ![image](https://github.com/user-attachments/assets/4e5bfd8c-1991-4360-b4e9-8b417bfaffa7)
 
-Now we can inspect the code of any function by inspecting the address app_base + function offset, for example the function uv_spawn is located at 
+Now we can inspect the code of any function by inspecting the address ```app_base + function offset```.For example the function uv_spawn is located at 
 7ff6147f0000 + 0x229c1e0. The offsets differ depending on the application binary.
 Looking into the function uv_spawn, at offset 0x184 is the following assembly instruction.
 Inspecting uv_spawn + 0x184
+
 ![image](https://github.com/user-attachments/assets/2cff9684-8875-4051-9c3d-f302a4cd2deb)
 
 Inspecting the call instruction address
@@ -282,10 +284,10 @@ Inspecting the first address of the call instruction address
 
 ![image](https://github.com/user-attachments/assets/9a5bf948-f4fe-4de6-b078-bfccc18c8493)
 
-As seen in the screenshots, the first address uv_spawn + 0x184 contains an assembly instruction which calls the address contained in 0x7FF61E6D00C0, the content of this address is the address of a kernel32 function, KERNEL32_MultiByteToWideCharStub
+As seen in the screenshots, the first address uv_spawn + 0x184 contains an assembly instruction which calls the address contained in ```0x7FF61E6D00C0```, the content of this address is the address of a kernel32 function, ```KERNEL32_MultiByteToWideCharStub```
 There is a reference to an external module (kernel32.dll) from memory we can control
-uv_spawn + 0x184 = KERNEL32_MultiByteToWideCharStub
-This information is consistent across every electron application so it can be used to leak kernel32.dll and get access to winexec.
+```uv_spawn + 0x184 = KERNEL32_MultiByteToWideCharStub```
+This information is consistent across different electron application so it can be used as a reliable method to leak kernel32.dll and get access to winexec.
 
 As mentioned initially, when our shellcode is executed we can set a breakpoint as the first instruction and inspect the stack.
 
