@@ -31,6 +31,7 @@ On the other hand an object array contains an address to the object of reference
 ![image](https://github.com/user-attachments/assets/4c740c74-94e8-4f3a-bcd3-a0e8028b9f50)
 
 console.log(obj_arr[0]) returns the content of the address at obj_arr[0]
+
 console.log(fl_arr[0]) returns the literal value in the memory of fl_arr[0]
 
 This means that we can use the initial memory corruption to modity the elements pointer of fl_arr and obj_arr. 
