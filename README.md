@@ -2,7 +2,7 @@
 
 # How to develop n-day chrome exploit for electron applications
 
-Electron applications usually run an older version of chrome, this exposes them to attac from public n-day chrome exploits.
+Electron applications usually run an older version of chrome, this exposes them to exploits from public n-day chrome exploits.
 
 </header>
 
