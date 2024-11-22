@@ -36,11 +36,7 @@ console.log(fl_arr[0]) returns the literal value in the memory of fl_arr[0]
 
 This means that we can use the initial memory corruption to modity the elements pointer of fl_arr and obj_arr. 
 
-We got the first primitive addrOf
-
-If both arrays point at the same address, we can store an object in obj_arr[0], in memory obj_arr[0] will contain the address of the object. Then we can get it’s address by reading fl_arr[0], because fl_arr[0] is pointing at obj_arr[0], accesing fl_arr[0] returns the literal value in memory of obj_arr[0]
-
-![image](https://github.com/user-attachments/assets/9457df1b-6887-461e-a3d8-d436176d5068)
+Firs primitive addrOf
 
 ```javascript
 data = ftoi(oob_arr[5]);
@@ -55,6 +51,12 @@ function addrOf(o) {
     return ftoi(fl_arr[0]) & 0xffffffffn;
 }
 ```
+
+If both arrays point at the same address, we can store an object in obj_arr[0], in memory obj_arr[0] will contain the address of the object. Then we can get it’s address by reading fl_arr[0], because fl_arr[0] is pointing at obj_arr[0], accesing fl_arr[0] returns the literal value in memory of obj_arr[0]
+
+![image](https://github.com/user-attachments/assets/9457df1b-6887-461e-a3d8-d436176d5068)
+
+
 Using the same method we can read  and write memory by assigning the address to fl_arr[0]
 
 ```javascript
