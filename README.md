@@ -330,4 +330,26 @@ sc = '''int3
         call r13
 '''
 
+## Shellcode execution
 
+This doesn't include a sandbox escape, it is common for electron application to run with --no-sandbox.
+
+We can verify through windbg the execution of our code.
+
+![image](https://github.com/user-attachments/assets/c0b0d31e-2c89-42c9-bba9-382579e8d6ea)
+
+Running the poc we see the breakpoint as our first instruction and the next instruction matches our shellcode
+
+![image](https://github.com/user-attachments/assets/672c5b7b-9d9b-49d4-9ffa-0afac98e8d83)
+
+Stepping into the following instructions the blanks are filled with nops and the reference to kernel32 is obtained.
+
+![image](https://github.com/user-attachments/assets/52358c47-9cc6-4cf1-8540-8cc5d52b91f2)
+
+The arguments for WinExec are pushed onto the stack, then WinExec address is called
+
+![image](https://github.com/user-attachments/assets/fa5fe492-ad02-494d-95c3-506a7d17b68c)
+
+We have successfully executed shellcode in an electron application using a chrome n-day memory corruption.
+
+![image](https://github.com/user-attachments/assets/5ca9af92-a42b-4345-a66b-8afcaf02da3d)
