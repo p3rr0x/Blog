@@ -7,7 +7,7 @@
   Add your open source license, GitHub uses MIT license.
 -->
 
-# GitHub Pages
+# How to develop n-day chrome exploit for electron applications
 
 _Create a site or blog from your GitHub repositories with GitHub Pages._
 
