@@ -9,7 +9,7 @@ Electron applications usually run an older version of chrome, this exposes them 
 
 ## Finding chrome and v8 version 
 
-This can be found by running the application with the argument –inspect={port} and –remote-debugging-port={port2}
+This can be found by running the application with the argument ```–inspect={port}``` and ```–remote-debugging-port={port2}```, in chrome navigate to ```chrome://inspect``` and add the ports to discover network targets.
 The first attaches node main process to a debugger, then by loading process module the information of v8 and other properties is obtained
 
 ![image](https://github.com/user-attachments/assets/4bf57ddd-9470-4da1-900a-b80ac7306ef3)
