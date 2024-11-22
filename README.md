@@ -209,8 +209,10 @@ for i in range(1,drop):
 print(float1)
 ```
 ![image](https://github.com/user-attachments/assets/2de89476-2348-49a8-ab0b-1e295afa9915)
+
 Next we will write the output of shellcode.py as .wat file 
 Test.wat
+
 ![image](https://github.com/user-attachments/assets/c1fb21b0-83be-426a-870f-d3d4c9579eaf)
 
 Convert it to Uint8Array
