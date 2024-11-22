@@ -340,6 +340,7 @@ sc = '''int3
 	inc rdx
         call r13
 '''
+```
 
 ## Shellcode execution
 
@@ -364,3 +365,19 @@ The arguments for WinExec are pushed onto the stack, then WinExec address is cal
 We have successfully executed shellcode in an electron application using a chrome n-day memory corruption.
 
 ![image](https://github.com/user-attachments/assets/5ca9af92-a42b-4345-a66b-8afcaf02da3d)
+
+# External references
+
+https://www.matteomalvica.com/blog/2024/06/05/intro-v8-exploitation-maglev/#jit-spraying-shellcode
+
+https://starlabs.sg/blog/2022/12-the-hole-new-world-how-a-small-leak-will-sink-a-great-browser-cve-2021-38003/
+
+https://issuetracker.google.com/issues/343407073?pli=1
+
+https://starlabs.sg/blog/2022/12-deconstructing-and-exploiting-cve-2020-6418/
+
+https://x.com/xvonfers/
+
+https://github.com/mistymntncop/
+
+
