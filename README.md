@@ -84,7 +84,9 @@ Inspect the memory address of the WebAssembly module, imported_function_target  
 
 imported_function_target  address contains the address of the RWX page
 ![image](https://github.com/user-attachments/assets/83599be4-505b-4ffc-81f9-682613d7655d)
+
 Confirm RX permissions
+
 ![image](https://github.com/user-attachments/assets/01349ad2-0c8d-43eb-8ff3-fb08a7f3ad33)
 
 
