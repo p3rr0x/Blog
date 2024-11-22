@@ -75,7 +75,7 @@ function heap_write(addr, val) {
 ```
 
 ## Code execution in renderer process
-First, we obtain a way to hijack the execution target of a function, this allows us to redirect code execution to an arbitrary address. This can be obtained by getting the Imported_function_target address of a WebAssembly module.
+First, we obtain a way to hijack the target address of a function, this allows us to redirect code execution to an arbitrary address. It can be obtained by getting the Imported_function_target address of a WebAssembly module.
 ![image](https://github.com/user-attachments/assets/447944c9-4d32-4d47-9b5d-3d7908867bb3)
 
 Inspect the memory address of the WebAssembly module, imported_function_target  is located at offset 0x30 (this differs depending on v8 version)
