@@ -18,7 +18,7 @@ Some applications disable main process debug, in that case the second argument a
  
 ![image](https://github.com/user-attachments/assets/5446298e-6e33-4744-819b-c42ef97b3a6f)
 
-Once the chrome version is obtained it just a matter of finding a memory corruption for that version.
+Once chrome version is obtained it just a matter of finding a memory corruption for that version.
 
 ## Developing arbitrary read/write primitives
 Once the initial memory corruption bug is found the process is standard, develop arbitrary read/write primitives.
