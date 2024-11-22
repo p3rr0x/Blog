@@ -295,10 +295,12 @@ Breakpoint hit first assembly instruction
 
 ![image](https://github.com/user-attachments/assets/146c9bfe-c1a2-4ee2-b79e-45ca475ef6a3)
 
-At RSP + 0x38 there is an address at a fixed offset from the reference to kernel32.dll previously found.
+```RSP + 0x38``` contains an address which is at a fixed offset from the reference to kernel32.dll previously found.
 
-uv_spawn + 0x184 assembly instruction address –  address at RSP + 0x38 
+```uv_spawn + 0x184 assembly call instruction address``` –  ```address at RSP + 0x38```
+
 0x7FF61E6D00C0 – 0x7FF618950E8A = 0x5D7F236
+
 Connecting the kernel reference from uv_spawn and the fixed memory value in the stack at RSP + 0x38 we can craft reliable shellcode to access kernel32.dll -> winexec and run our exploit
 
 ```assembly
