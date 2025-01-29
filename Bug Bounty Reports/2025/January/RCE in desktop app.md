@@ -11,5 +11,6 @@ For the new renderer process, once the document is loaded an internal electron e
 This event is executed through the internal listener located at **node:electron/js2c/sandbox_bundle**
 ![image](https://github.com/user-attachments/assets/2c33533b-5838-4867-bde4-30d5b1fe54ea)
 
-As seen in the following screenshot, the variable arguments contains 3 elements
+As seen in the following screenshot, the variable **arguments** contains 3 elements
+
 ![image](https://github.com/user-attachments/assets/233335cb-cad0-4f8d-9c25-855e9b15dae7)
